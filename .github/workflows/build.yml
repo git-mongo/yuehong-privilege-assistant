@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,6 +33,7 @@ jobs:
       - name: Setup Rust targets
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+          cargo install cargo-ndk
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -41,13 +42,26 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
-          
-          # 强制指定 C/C++ 编译器路径，解决 cc-rs 找不到 android34-clang 的问题
+          # 核心：按 cc-rs 环境变量规范设置，同时提供带连字符和下划线的格式
+          CC_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
+          CXX_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
+          AR_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
           CC_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
           CXX_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
           AR_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
           CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
+          # 补齐 bindgen / clang-sys 查找 NDK 的目标架构与 API 版本参数
+          BINDGEN_EXTRA_CLANG_ARGS: "--target=aarch64-linux-android36"
+          CARGO_NDK_ANDROID_PLATFORM: '36'
         run: |
+          # 强制在运行器全局层写入 Cargo target 配置，压制掉局部和默认的错误推断
+          mkdir -p ~/.cargo
+          cat <<EOF > ~/.cargo/config.toml
+          [target.aarch64-linux-android]
+          linker = "${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang"
+          ar = "${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          EOF
+
           ./gradlew assembleDebug
 
       - name: Upload APK
