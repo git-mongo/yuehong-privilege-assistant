@@ -1,71 +1,43 @@
 name: Build Debug APK
-
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
           cache: 'gradle'
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools'
-
       - name: Install SDK packages and NDK
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.3.13750724"
-
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;29.0.13113456" "cmake;3.22.1"
       - name: Setup Rust targets
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
-          cargo install cargo-ndk
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-
       - name: Build with Gradle
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
-          # 核心：按 cc-rs 环境变量规范设置，同时提供带连字符和下划线的格式
-          CC_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
-          CXX_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
-          AR_aarch64-linux-android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
-          CC_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
-          CXX_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
-          AR_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
-          # 补齐 bindgen / clang-sys 查找 NDK 的目标架构与 API 版本参数
-          BINDGEN_EXTRA_CLANG_ARGS: "--target=aarch64-linux-android36"
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456
+          CC_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
+          CXX_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
+          AR_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
           CARGO_NDK_ANDROID_PLATFORM: '36'
-        run: |
-          NDK_BIN="${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          
-          # 核心操作：创建一个名为 android34-clang.cmd 的软链接，指向真实的 android36-clang
-          ln -sf "$NDK_BIN/aarch64-linux-android36-clang" "$NDK_BIN/aarch64-linux-android34-clang.cmd"
-          
-          # 保险起见，把其他常见架构的幻影文件也一并建出来
-          ln -sf "$NDK_BIN/armv7a-linux-androideabi36-clang" "$NDK_BIN/armv7a-linux-androideabi34-clang.cmd"
-          ln -sf "$NDK_BIN/x86_64-linux-android36-clang" "$NDK_BIN/x86_64-linux-android34-clang.cmd"
-          
-          # 执行构建
-          ./gradlew assembleDebug
-
+        run: ./gradlew assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

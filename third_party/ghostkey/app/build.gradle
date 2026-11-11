@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace 'com.GhostKey.app'
-    compileSdk 37
+    compileSdk 36
 
     defaultConfig {
         minSdk 29
@@ -15,9 +15,6 @@ android {
             cmake {
                 arguments '-DANDROID_STL=none'
                 // NDK clang is selected explicitly by the Android toolchain.
-                // Skip CMake's nested cmd.exe compiler-link probe on this host;
-                // the repository build script then compiles and links the actual target.
-                arguments '-DCMAKE_C_COMPILER_FORCED=TRUE'
                 abiFilters 'arm64-v8a'
             }
         }

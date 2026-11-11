@@ -1,4 +1,4 @@
-API ?= 35
+API ?= 36
 
 # Auto-detect NDK
 ifeq ($(OS),Windows_NT)

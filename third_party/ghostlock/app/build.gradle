@@ -116,7 +116,7 @@ def nativeSources = [
 
 android {
     namespace 'com.ghostlock.app'
-    compileSdk 37
+    compileSdk 36
 
     defaultConfig {
         // This module is embedded in the assistant, whose app-wide minimum is Android 10.
@@ -185,25 +185,18 @@ tasks.named('preBuild').configure {
 }
 
 tasks.register('buildGhostlockNative', Exec) {
-    description = 'Build the upstream GhostLock native executable with the Android NDK.'
-    def ndk = resolveNdkDir()
-    def compiler = new File(ndkBinDir(), 'clang++.exe')
-    def output = new File(nativeBuildDir, 'ghostlock')
-    workingDir nativeRoot
-    doFirst { output.parentFile.mkdirs() }
-    def targetConfigDefine = '-DTARGET_CONFIG_H=' + '\\' + '"kernel/target.h' + '\\' + '"'
-    commandLine(([compiler.absolutePath,
-                  '--target=aarch64-linux-android34',
-                  '-O2', '-flto', '-Wall', '-Wextra', '-Wconversion', '-Wsign-conversion',
-                  '-Wno-unused-parameter', '-Wno-sign-compare', '-Wno-unused-function',
-                  '-Icore', targetConfigDefine, '-std=c++23', '-fno-rtti', '-fPIE', '-pie',
-                  '-pthread', '-static-libstdc++'] + nativeSources + ['-o', output.absolutePath]))
-    environment 'ANDROID_NDK_HOME', ndk.absolutePath
-    environment 'NDK_ROOT', ndk.absolutePath
-    inputs.files(fileTree(nativeRoot) { include '**/*.c', '**/*.h', '**/*.cpp', '**/*.hpp' },
-            new File(nativeRoot, 'Makefile'))
-    inputs.property 'sourceFiles', nativeSources
-    outputs.file output
+    description = 'Build the upstream GhostLock native executable using Makefile.'
+    workingDir nativeRoot // 确保 nativeRoot 指向包含 Makefile 的 src 目录
+    
+    // 显式传入 NDK 路径和 API 级别，确保 make 能找到正确的工具链
+    environment 'ANDROID_NDK_HOME', resolveNdkDir().absolutePath
+    environment 'ANDROID_NDK_ROOT', resolveNdkDir().absolutePath
+    environment 'API', '36'
+    
+    commandLine 'make', 'ghostlock'
+    
+    inputs.files(fileTree(nativeRoot) { include '**/*.c', '**/*.h', '**/*.cpp', '**/*.hpp' }, new File(nativeRoot, 'Makefile'))
+    outputs.file new File(nativeBuildDir, 'ghostlock')
 }
 
 tasks.register('prepareGhostlockJniLibs', Copy) {
@@ -215,7 +208,7 @@ tasks.register('prepareGhostlockJniLibs', Copy) {
     into generatedArm64JniLibs
     rename { 'libghostlock.so' }
     doLast {
-        def strip = new File(ndkBinDir(), 'llvm-strip.exe')
+        def strip = new File(ndkBinDir(), 'llvm-strip')
         def code = new ProcessBuilder(strip.absolutePath, '--strip-all', packagedBinary.absolutePath)
                 .inheritIO().start().waitFor()
         if (code != 0) throw new GradleException("llvm-strip failed with ${code}")
@@ -225,8 +218,8 @@ tasks.register('prepareGhostlockJniLibs', Copy) {
 tasks.register('buildGhostlockExtract', Exec) {
     description = 'Build the upstream Rust OTA/image extractor.'
     def ndkBin = ndkBinDir()
-    def clang = new File(ndkBin, 'aarch64-linux-android34-clang.cmd').absolutePath
-    def ar = new File(ndkBin, 'llvm-ar.exe').absolutePath
+    def clang = new File(ndkBin, 'aarch64-linux-android36-clang').absolutePath
+    def ar = new File(ndkBin, 'llvm-ar').absolutePath
     def cargoCommand = [resolveCargoExecutable()]
     if (useOndk()) cargoCommand << '+ondk'
     cargoCommand.addAll(['build', '--release', '--target', 'aarch64-linux-android'])
