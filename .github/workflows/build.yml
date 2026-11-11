@@ -41,11 +41,14 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
           ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
-          ANDROID_API_LEVEL: 36
-          ANDROID_PLATFORM: android-36
-          CARGO_NDK_ANDROID_PLATFORM: 36
+          
+          # 强制指定 C/C++ 编译器路径，解决 cc-rs 找不到 android34-clang 的问题
+          CC_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
+          CXX_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang++
+          AR_aarch64_linux_android: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang
         run: |
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
