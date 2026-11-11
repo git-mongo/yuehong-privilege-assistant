@@ -54,14 +54,16 @@ jobs:
           BINDGEN_EXTRA_CLANG_ARGS: "--target=aarch64-linux-android36"
           CARGO_NDK_ANDROID_PLATFORM: '36'
         run: |
-          # 强制在运行器全局层写入 Cargo target 配置，压制掉局部和默认的错误推断
-          mkdir -p ~/.cargo
-          cat <<EOF > ~/.cargo/config.toml
-          [target.aarch64-linux-android]
-          linker = "${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android36-clang"
-          ar = "${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
-          EOF
-
+          NDK_BIN="${{ env.ANDROID_HOME }}/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          
+          # 核心操作：创建一个名为 android34-clang.cmd 的软链接，指向真实的 android36-clang
+          ln -sf "$NDK_BIN/aarch64-linux-android36-clang" "$NDK_BIN/aarch64-linux-android34-clang.cmd"
+          
+          # 保险起见，把其他常见架构的幻影文件也一并建出来
+          ln -sf "$NDK_BIN/armv7a-linux-androideabi36-clang" "$NDK_BIN/armv7a-linux-androideabi34-clang.cmd"
+          ln -sf "$NDK_BIN/x86_64-linux-android36-clang" "$NDK_BIN/x86_64-linux-android34-clang.cmd"
+          
+          # 执行构建
           ./gradlew assembleDebug
 
       - name: Upload APK
