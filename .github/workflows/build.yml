@@ -1,4 +1,5 @@
 name: Build Debug APK
+
 on:
   push:
     branches: [ main, master ]
@@ -7,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,10 +25,10 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: Install SDK packages
+      - name: Install SDK packages and NDK
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.3.13750724"
 
       - name: Setup Rust targets
         run: |
@@ -36,7 +38,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.3.13750724
+          ANDROID_API_LEVEL: 36
+          ANDROID_PLATFORM: android-36
+          CARGO_NDK_ANDROID_PLATFORM: 36
+        run: |
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
