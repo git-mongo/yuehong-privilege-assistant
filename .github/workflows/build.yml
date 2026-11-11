@@ -30,6 +30,10 @@ jobs:
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           cargo install cargo-ndk
 
+      - name: Manual Android NDK installation (android-37)
+        run: |
+          /usr/local/lib/android/sdk/cmdline-tools/16.0/bin/sdkmanager "platforms;android-37 build-tools;37.0.0"
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
